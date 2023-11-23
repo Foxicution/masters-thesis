@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "masters-thesis"
+name = "mt"
 version = "0.1.0"
 description = ""
 authors = ["Foxicution <foxicution@gmail.com>"]
 readme = "README.md"
-packages = [{include = "masters_thesis"}]
+packages = [{include = "mt"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"

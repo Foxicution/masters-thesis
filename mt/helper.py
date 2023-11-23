@@ -1,6 +1,6 @@
 from requests import get
 from typing import Any, Iterator, TypeVar
-from masters_thesis.credentials import GITHUB_TOKEN
+from mt.credentials import GITHUB_TOKEN
 
 T = TypeVar("T")
 
