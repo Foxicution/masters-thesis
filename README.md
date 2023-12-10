@@ -1,3 +1,20 @@
+<!--- TODO: finish the usage section -->
+## Usage
+```
+# 1. get github data for repositories under 20000 stars (because of api limits)
+python mt/github_data.py
+# 2. featurize repos on a file level (filtering for repos that fit applied)
+python mt/pull_repos.py
+# 3. put features into the same files
+python mt/process_features.py
+# 4. clean the features and put them to the final file
+python mt/clean_features.py
+# 5. train model and predict feature importance
+python mt/prediction_feat_importance.py
+# 6. (optional) exploratory analysis
+python mt/analysis.py
+```
+
 ## About
 
 
