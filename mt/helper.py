@@ -1,3 +1,4 @@
+import logging as log
 from typing import Any, AsyncIterator, TypeVar, Iterator
 from requests import get
 
@@ -7,12 +8,13 @@ from mt.credentials import GITHUB_TOKEN
 
 T = TypeVar("T")
 
+
 def api_get(url: str) -> Iterator[dict[str, Any]]:
     """Get data as a json and put"""
     response = get(
         url,
         headers={
-            "Accept": "application/vnd.github.v3+json",
+            "Accept": "application/vnd.github.v3.star+json",
             "Authorization": f"Bearer {GITHUB_TOKEN}",
         },
     )
@@ -26,7 +28,7 @@ def api_get(url: str) -> Iterator[dict[str, Any]]:
         if "next" in response.links.keys():
             yield from api_get(response.links["next"]["url"])
     else:
-        print(f"Error {response.status_code} when getting {url}")
+        log.exception(f"Error {response.status_code} when getting {url}")
 
 
 def flatten(list: list[list[T]]) -> list[T]:
