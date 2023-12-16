@@ -16,15 +16,16 @@ from tree_sitter_languages import get_parser
 from mt.definitions import DATA_DIR
 
 repo_path = DATA_DIR / "test" / "python"
+parser = get_parser("python")
 
 
-def read_file_contents(file_path: Path) -> str:
+def read_file_contents(file_path: Path) -> bytes:
     """Read the content of a file"""
     try:
-        return file_path.read_text(encoding="utf-8")
+        return file_path.read_bytes()
     except IOError as e:
         print(f"Error reading file {file_path}: {e}")
-        return ""
+        return b""
 
 
 ####################################################################################
@@ -45,6 +46,7 @@ def count_lines_of_code(file_content: str) -> dict[str, int]:
     }
 
 
+# TODO: Add typing here
 def calculate_cyclomatic_complexity(file_content):
     blocks = cc_visit(file_content)
     if blocks:
@@ -53,12 +55,12 @@ def calculate_cyclomatic_complexity(file_content):
         return 0  # Return 0 or an appropriate value for files with no blocks
 
 
-def check_code_quality(file_path):
+def check_code_quality(file_path: Path) -> str:
     result = subprocess.run(["pylint", file_path], capture_output=True, text=True)
     return result.stdout
 
 
-def analyze_dependencies(file_content):
+def analyze_dependencies(file_content: str) -> list[str]:
     tree = ast.parse(file_content)
     imports = [
         node
@@ -68,7 +70,7 @@ def analyze_dependencies(file_content):
     return [node.names[0].name for node in imports]
 
 
-def tokenize_comments(file_content):
+def tokenize_comments(file_content: str) -> list[list[str]]:
     comments = [
         line for line in file_content.split("\n") if line.strip().startswith("#")
     ]
@@ -141,7 +143,7 @@ def get_default_branch(repo_path: str) -> str | None:
     return None
 
 
-def checkout_default_branch(repo_path: str):
+def checkout_default_branch(repo_path: str) -> None:
     default_branch = get_default_branch(repo_path)
     if default_branch:
         subprocess.run(["git", "-C", repo_path, "checkout", default_branch], check=True)
