@@ -60,6 +60,7 @@ def check_code_quality(file_path: Path) -> str:
     return result.stdout
 
 
+# TODO: Compare efficiency of this vs treesitter and consolidate into one
 def analyze_dependencies(file_content: str) -> list[str]:
     tree = ast.parse(file_content)
     imports = [
@@ -78,26 +79,56 @@ def tokenize_comments(file_content: str) -> list[list[str]]:
     return tokens
 
 
-def process_file(file_path: Path) -> dict[str, Any]:
-    content = read_file_contents(file_path)
-    loc = count_lines_of_code(content)
-    complexity = calculate_cyclomatic_complexity(content)
-    dependencies = analyze_dependencies(content)
-    quality = check_code_quality(file_path)
-    comment_tokens = tokenize_comments(content)
+#################################################################################
+# Filtering for anon nodes is necessary to avoid a lot of noise and non important features?
+def tree_to_graph(root: tree_sitter.Node, with_anon: bool = False) -> nx.DiGraph:
+    G = nx.DiGraph()
+    todo = [root]
+    while todo:
+        node = todo.pop()
+        if with_anon or node.is_named:
+            G.add_node(node.id, type=node.type)
+        for child in node.children:
+            if with_anon or child.is_named:
+                G.add_edge(node.id, child.id)
+            todo.append(child)
+    return G
 
-    # Combine all features into a dictionary or a similar structure
+
+def get_tree_from_code(code: bytes) -> nx.DiGraph:
+    return pipe(code, parser.parse, lambda tree: tree.root_node, tree_to_graph)
+
+
+def save_graph_to_pickle(graph: nx.Graph, path: Path):
+    with open(path, "wb") as f:
+        pickle.dump(graph, f)
+
+
+# TODO: https://chat.openai.com/c/f858a84a-0811-4187-b0c5-97765b2eab11
+# AST trees
+def bytes_to_ast(file_content: bytes) -> dict:
+    "Reads the file content and returns the AST as a json nx graph."
+    # TODO: if not efficient enough, transform to .pkl files
+    return pipe(file_content, get_tree_from_code, nx.node_link_data)
+
+
+def process_file(file_path: Path, file_bytes: bytes, file_text: str) -> dict[str, Any]:
     features = {
-        "loc": loc,
-        "complexity": complexity,
-        "dependencies": dependencies,
-        "quality": quality,
-        "comment_tokens": comment_tokens,
+        "loc": count_lines_of_code(file_text),
+        "complexity": calculate_cyclomatic_complexity(file_text),
+        "dependencies": analyze_dependencies(file_text),
+        "quality": check_code_quality(file_path),
+        "comment_tokens": tokenize_comments(file_text),
+        "ast": bytes_to_ast(file_bytes),
     }
     return features
 
 
-def process_commit(commit, repo_path):
+def process_commit(
+    commit: Commit,
+    repo_path: Path,
+    last_commit: dict[str, Any] | None,
+) -> dict:
     # Checkout commit
     try:
         subprocess.run(
@@ -110,15 +141,28 @@ def process_commit(commit, repo_path):
         print(f"Error checking out commit {commit.hash}: {e}")
         return {}
 
+    # Because pydriller doesn't process merge commits we do our own content processing
     file_features = {}
-    for file in commit.modified_files:
-        if file.filename.endswith(".py"):
-            file_path = repo_path / file.filename
-            if file_path.exists():
-                try:
-                    file_features[str(file_path)] = process_file(file_path)
-                except Exception as e:
-                    print(f"Error processing file {file.filename}: {e}")
+    for file in repo_path.glob("**/*.py"):
+        if file.suffix == "py":
+            try:
+                file_bytes = read_file_contents(file)
+                file_text = file_bytes.decode()
+
+                content_hash = sha1(file_bytes, usedforsecurity=False)
+                if (last_file_features := last_commit.get(str(file))) is not None:
+                    if last_file_features["content_hash"] == content_hash:
+                        file_features[str(file)] = {
+                            "content_hash": content_hash,
+                            "changed": False,
+                        }
+                        continue
+                file_features[str(file)] = process_file(file, file_bytes, file_text) | {
+                    "content_hash": content_hash,
+                    "changed": True,
+                }
+            except Exception as e:
+                print(f"Error processing file {file.name}: {e}")
     return file_features
 
 
@@ -154,15 +198,20 @@ def checkout_default_branch(repo_path: str) -> None:
 def repo_to_file_features(repo_path: Path) -> dict[str, dict]:
     featurized_commits = {}
     checkout_default_branch(repo_path)
+    last_commit = None
     for commit in Repository(str(repo_path)).traverse_commits():
-        # for commit in Repo(repo_path).iter_commits():
-        # print(commit.hexsha)
         print(f"Processing commit: {commit.hash}")
-        featurized_commits[commit.hash] = process_commit(commit, repo_path)
+        processed_commit = process_commit(commit, repo_path, last_commit)
+        featurized_commits[commit.hash] = processed_commit
+        last_commit = processed_commit
         print(f"Completed processing for commit: {commit.hash}\n")
     return featurized_commits
 
 
 if __name__ == "__main__":
-    ...
-    # traverse_commits(repo_dir)
+    import json
+
+    with open("t.json", "w") as f:
+        json.dump(
+            repo_to_file_features(repo_path), f, default=lambda self: self.hex_digest()
+        )
