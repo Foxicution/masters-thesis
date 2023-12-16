@@ -1,8 +1,8 @@
 import logging as log
-from typing import Any, AsyncIterator, TypeVar, Iterator
-from requests import get
+from typing import Any, AsyncIterator, Iterator, TypeVar
 
 import aiohttp
+from requests import get
 
 from mt.credentials import GITHUB_TOKEN
 

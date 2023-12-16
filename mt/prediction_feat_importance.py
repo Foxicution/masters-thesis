@@ -1,9 +1,10 @@
-from mt.definitions import DATA_DIR
+import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+
+from mt.definitions import DATA_DIR
 
 if __name__ == "__main__":
     df = pd.read_csv(DATA_DIR / "final.csv", index_col=0)

@@ -1,8 +1,10 @@
-from mt.definitions import REPO_DIR, DATA_DIR
 import json
 from datetime import datetime
-from dateutil.parser import parse
 from typing import Any
+
+from dateutil.parser import parse
+
+from mt.definitions import DATA_DIR, REPO_DIR
 from mt.helper import flatten
 from mt.pull_repos import delete_empty_files
 

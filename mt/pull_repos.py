@@ -1,9 +1,10 @@
-from mt.definitions import REPO_DIR, ROOT_DIR
-from pathlib import Path
 import json
-import subprocess
-import os
 import logging as log
+import os
+import subprocess
+from pathlib import Path
+
+from mt.definitions import REPO_DIR, ROOT_DIR
 from mt.featurize_repo import repo_to_file_features
 
 REQUIRED_FILES = ["commits.json", "issues.json", "repo.json", "stars.json"]

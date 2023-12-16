@@ -1,10 +1,12 @@
 import json
+import re
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+
 from mt.definitions import DATA_DIR
-from typing import Any
-import re
 
 
 def extract_pylint_rating(pylint_output: str) -> float:

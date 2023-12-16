@@ -1,7 +1,8 @@
-from mt.definitions import DATA_DIR
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
+
+from mt.definitions import DATA_DIR
 
 if __name__ == "__main__":
     df = pd.read_csv(DATA_DIR / "final_non_scaled.csv", index_col=0)
