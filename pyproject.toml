@@ -35,6 +35,9 @@ black = "^23.11.0"
 isort = "^5.12.0"
 euporie = "^2.6.2"
 
+[tool.isort]
+skip_gitignore = true
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
