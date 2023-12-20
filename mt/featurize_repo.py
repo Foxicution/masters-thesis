@@ -127,7 +127,7 @@ def process_file(file_path: Path, file_bytes: bytes, file_text: str) -> dict[str
 def process_commit(
     commit: Commit,
     repo_path: Path,
-    last_commit: dict[str, Any] | None,
+    last_commit: dict[str, Any],
 ) -> dict:
     # Checkout commit
     try:
@@ -144,25 +144,24 @@ def process_commit(
     # Because pydriller doesn't process merge commits we do our own content processing
     file_features = {}
     for file in repo_path.glob("**/*.py"):
-        if file.suffix == "py":
-            try:
-                file_bytes = read_file_contents(file)
-                file_text = file_bytes.decode()
+        try:
+            file_bytes = read_file_contents(file)
+            file_text = file_bytes.decode()
 
-                content_hash = sha1(file_bytes, usedforsecurity=False)
-                if (last_file_features := last_commit.get(str(file))) is not None:
-                    if last_file_features["content_hash"] == content_hash:
-                        file_features[str(file)] = {
-                            "content_hash": content_hash,
-                            "changed": False,
-                        }
-                        continue
-                file_features[str(file)] = process_file(file, file_bytes, file_text) | {
-                    "content_hash": content_hash,
-                    "changed": True,
-                }
-            except Exception as e:
-                print(f"Error processing file {file.name}: {e}")
+            content_hash = sha1(file_bytes, usedforsecurity=False)
+            if (last_file_features := last_commit.get(str(file))) is not None:
+                if last_file_features["content_hash"] == content_hash:
+                    file_features[str(file)] = {
+                        "content_hash": content_hash,
+                        "changed": False,
+                    }
+                    continue
+            file_features[str(file)] = process_file(file, file_bytes, file_text) | {
+                "content_hash": content_hash,
+                "changed": True,
+            }
+        except Exception as e:
+            print(f"Error processing file {file.name}: {e}")
     return file_features
 
 
@@ -198,7 +197,7 @@ def checkout_default_branch(repo_path: str) -> None:
 def repo_to_file_features(repo_path: Path) -> dict[str, dict]:
     featurized_commits = {}
     checkout_default_branch(repo_path)
-    last_commit = None
+    last_commit = {}
     for commit in Repository(str(repo_path)).traverse_commits():
         print(f"Processing commit: {commit.hash}")
         processed_commit = process_commit(commit, repo_path, last_commit)
@@ -213,5 +212,5 @@ if __name__ == "__main__":
 
     with open("t.json", "w") as f:
         json.dump(
-            repo_to_file_features(repo_path), f, default=lambda self: self.hex_digest()
+            repo_to_file_features(repo_path), f, default=lambda self: self.hexdigest()
         )
