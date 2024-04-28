@@ -3,7 +3,7 @@ import pickle
 import subprocess
 from hashlib import sha1
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import networkx as nx
 import tree_sitter
@@ -12,6 +12,8 @@ from nltk.tokenize import word_tokenize
 from pydriller import Commit, Repository
 from radon.complexity import average_complexity, cc_visit
 from tree_sitter_languages import get_parser
+import uuid6
+import json
 
 from mt.definitions import DATA_DIR
 
@@ -115,9 +117,9 @@ def bytes_to_ast(file_content: bytes) -> dict:
 def process_file(file_path: Path, file_bytes: bytes, file_text: str) -> dict[str, Any]:
     features = {
         "loc": count_lines_of_code(file_text),
-        "complexity": calculate_cyclomatic_complexity(file_text),
-        "dependencies": analyze_dependencies(file_text),
-        "quality": check_code_quality(file_path),
+        # "complexity": calculate_cyclomatic_complexity(file_text),
+        # "dependencies": analyze_dependencies(file_text),
+        # "quality": check_code_quality(file_path),
         "comment_tokens": tokenize_comments(file_text),
         "ast": bytes_to_ast(file_bytes),
     }
@@ -125,6 +127,7 @@ def process_file(file_path: Path, file_bytes: bytes, file_text: str) -> dict[str
 
 
 def process_commit(
+    file_feature_dir: Path,
     commit: Commit,
     repo_path: Path,
     last_commit: dict[str, Any],
@@ -148,17 +151,23 @@ def process_commit(
             file_bytes = read_file_contents(file)
             file_text = file_bytes.decode()
 
-            content_hash = sha1(file_bytes, usedforsecurity=False)
+            content_hash = sha1(file_bytes, usedforsecurity=False).hexdigest()
             if (last_file_features := last_commit.get(str(file))) is not None:
                 if last_file_features["content_hash"] == content_hash:
                     file_features[str(file)] = {
                         "content_hash": content_hash,
                         "changed": False,
+                        "feature_file": last_file_features["feature_file"]
                     }
                     continue
-            file_features[str(file)] = process_file(file, file_bytes, file_text) | {
+            features = process_file(file, file_bytes, file_text)
+            file_path = file_feature_dir / f"{uuid6.uuid7().hex}.json"
+            with open(file_path, "w") as f:
+                json.dump(features, f)
+            file_features[str(file)] = {
                 "content_hash": content_hash,
                 "changed": True,
+                "feature_file": file_path.as_posix()
             }
         except Exception as e:
             print(f"Error processing file {file.name}: {e}")
@@ -194,23 +203,30 @@ def checkout_default_branch(repo_path: str) -> None:
         print("Default branch could not be determined.")
 
 
-def repo_to_file_features(repo_path: Path) -> dict[str, dict]:
-    featurized_commits = {}
+def repo_to_file_features(repo_root: Path, repo_path: Path) -> Iterator[tuple[int, str, dict]]:
+    file_feature_dir = repo_root / "file_data"
+    file_feature_dir.mkdir(exist_ok=True)
     checkout_default_branch(repo_path)
     last_commit = {}
-    for commit in Repository(str(repo_path)).traverse_commits():
+    for i, commit in enumerate(Repository(str(repo_path)).traverse_commits()):
         print(f"Processing commit: {commit.hash}")
-        processed_commit = process_commit(commit, repo_path, last_commit)
-        featurized_commits[commit.hash] = processed_commit
+        processed_commit = process_commit(file_feature_dir, commit, repo_path, last_commit)
+        # featurized_commits[commit.hash] = processed_commit
         last_commit = processed_commit
         print(f"Completed processing for commit: {commit.hash}\n")
-    return featurized_commits
+        yield i, commit.hash, processed_commit
 
 
-if __name__ == "__main__":
+def test_repo():
     import json
 
-    with open("t.json", "w") as f:
+    with open("features.json", "w") as f:
         json.dump(
             repo_to_file_features(repo_path), f, default=lambda self: self.hexdigest()
         )
+
+
+if __name__ == "__main__":
+    import cProfile
+
+    cProfile.run("test_repo()", "old_method.profile")

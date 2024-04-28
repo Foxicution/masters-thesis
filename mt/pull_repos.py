@@ -32,14 +32,22 @@ def clone_repo(repo_dir: Path, repo_url: str):
 
 
 def process_repo_dir(repo_dir: Path) -> None:
+    commit_data_dir = repo_dir / "commit_data"
+    repo = repo_dir / "repo"
     with open(repo_dir / "repo.json") as f:
         repo_data = json.load(f)
     log.info(f"Processing {repo_data['html_url']}")
     clone_repo(repo_dir, repo_data["html_url"])
-    if not (feature_path := repo_dir / "features.json").exists():
-        repo = repo_dir / "repo"
-        with open(feature_path, "w") as f:
-            json.dump(repo_to_file_features(repo), f)
+    if not commit_data_dir.exists():
+        commit_data_dir.mkdir()
+        for i, commit_hash, data in repo_to_file_features(repo_dir, repo):
+            with open(commit_data_dir / f"{i}_{commit_hash}.json", "w") as f:
+                json.dump(data, f)
+
+    # if not (feature_path := repo_dir / "features.json").exists():
+    #     repo = repo_dir / "repo"
+    #     with open(feature_path, "w") as f:
+    #         json.dump(repo_to_file_features(repo), f)
 
 
 if __name__ == "__main__":
