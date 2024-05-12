@@ -33,6 +33,7 @@ torch-geometric = "^2.5.2"
 captum = "^0.7.0"
 sentence-transformers = "^2.6.1"
 pyvis = "^0.3.2"
+chardet = "^5.2.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.3.0"
