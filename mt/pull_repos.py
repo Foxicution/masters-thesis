@@ -51,11 +51,13 @@ def process_repo_dir(repo_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    log.basicConfig(level=log.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    for org_dir in REPO_DIR.iterdir():
-        for repo_dir in org_dir.iterdir():
-            if (feat := repo_dir / "features.json").exists():
-                feat.unlink()
-            delete_empty_files(repo_dir)
-            if all((repo_dir / file).exists() for file in REQUIRED_FILES):
-                process_repo_dir(repo_dir)
+    repo_dir = REPO_DIR / "pytorch/vision"
+    process_repo_dir(repo_dir)
+    # log.basicConfig(level=log.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    # for org_dir in REPO_DIR.iterdir():
+    #     for repo_dir in org_dir.iterdir():
+    #         if (feat := repo_dir / "features.json").exists():
+    #             feat.unlink()
+    #         delete_empty_files(repo_dir)
+    #         if all((repo_dir / file).exists() for file in REQUIRED_FILES):
+    #             process_repo_dir(repo_dir)
