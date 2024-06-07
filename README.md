@@ -1,4 +1,7 @@
 <!--- TODO: finish the usage section -->
+# Work in progress (WIP)
+The repository is still under work in progress, files and structure are messy and might be out of date, not work correctly. If you want to use the repository and the work performed check back when this message is removed.
+
 ## Usage
 ```
 # 1. get github data for repositories under 20000 stars (because of api limits)
